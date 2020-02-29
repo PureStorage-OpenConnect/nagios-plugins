@@ -1,4 +1,8 @@
-## Nagios/Icinga2
+# Nagios/Icinga2
+
+A repository of plugins and extensions to monitor Pure Storage FlashArray and FlashBlade astorage arrays with Nagios.
+
+## Plugins
 
 * [check_purefa_alert.py](check_purefa_alert.py) Simple plugin for monitoring Pure Storage FlashArray alerts status.
 * [check_purefa_hw.py](check_purefa_hw.py) Simple plugin for monitoring Pure Storage FlashArray hardware components.
@@ -8,6 +12,7 @@
 * [check_purefb_hw.py](check_purefb_hw.py) Simple plugin for monitoring Pure Storage FlashBlade hardware components.
 * [check_purefb_occpy.py](check_purefb_occpy.py) Simple plugin for monitoring Pure Storage FlashBlade space occupancy (global/object store/per shared filesystem).
 * [check_purefb_perf.py](check_purefb_perf.py) Simple plugin for monitoring Pure Storage FlashBlade performance metrics (global/per protocol).
+
 ### Installation
 
 The plugin scripts should be copied to the Nagios plugins directory on the machine hosting the Nagios server or the NRPE,
