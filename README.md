@@ -26,7 +26,9 @@ Plugins depends on
 
 [purity_fb](https://github.com/purestorage/purity_fb_python_client) Pure Storage Python REST Client for FlashBlade
 
+```bash
 pip install -r requirements.txt
+```
 
 ### Usage
 
