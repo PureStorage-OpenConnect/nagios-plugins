@@ -26,11 +26,7 @@ Plugins depends on
 
 [purity_fb](https://github.com/purestorage/purity_fb_python_client) Pure Storage Python REST Client for FlashBlade
 
-pip install nagiosplugin
-
-pip install purestorage
-
-pip install purity_fb
+pip install requirements.txt
 
 ### Usage
 
