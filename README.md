@@ -20,7 +20,7 @@ for example the /usr/lib/nagios/plugins folder should be used for Nagios XI.
 Change the execution rights of the plugins to allow the execution to 'all' (usually chmod 0755).
 Plugins depends on
 
-[nagiosplugin](http://pythonhosted.org/nagiosplugin) helper Python class library for Nagios plugins by Christian Kauhaus
+[nagiosplugin](https://github.com/mpounsett/nagiosplugin) helper Python class library for Nagios plugins
 
 [purestorage](https://github.com/purestorage/rest-client) Pure Storage Python REST Client for FlashArray
 
