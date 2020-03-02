@@ -129,13 +129,13 @@ Check the whole FlashArray performance indicators.
 
 check_purefa_perf.py 10.225.112.81 c4eb5b21-4122-b871-8b0f-684bf72b5283
 
-PURE_FA_PERF OK - FA wlat is 237us | 'FA rbw'=328977030B/s;;;0 'FA riops'=80269rd/s;;;0 'FA rlat'=419us;;;0 'FA wbw'=110185869B/s;;;0 'FA wiops'=26798wr/s;;;0 'FA wlat'=237us;;;0
+PURE_FA_PERF OK - FA wlat is 237us | 'FA_rbw'=328977030B/s;;;0 'FA_riops'=80269rd/s;;;0 'FA_rlat'=419us;;;0 'FA_wbw'=110185869B/s;;;0 'FA_wiops'=26798wr/s;;;0 'FA_wlat'=237us;;;0
 
 Check the volume *oracle1-u04* performance indicators
 
 check_purefa_perf.py 10.225.112.81 c4eb5b21-4122-b871-8b0f-684bf72b5283 --vol oracle1-u04
 
-PURE_FA_VOL_PERF OK - oracle1-u04 wlat is 205us | 'oracle1-u04 rbw'=336190250B/s;;;0 'oracle1-u04 riops'=82078rd/s;;;0 'oracle1-u04 rlat'=370us;;;0 'oracle1-u04 wbw'=111469774B/s;;;0 'oracle1-u04 wiops'=27214wr/s;;;0 'oracle1-u04 wlat'=205us;;;0
+PURE_FA_VOL_PERF OK - oracle1-u04_wlat is 205us | 'oracle1-u04_rbw'=336190250B/s;;;0 'oracle1-u04_riops'=82078rd/s;;;0 'oracle1-u04_rlat'=370us;;;0 'oracle1-u04_wbw'=111469774B/s;;;0 'oracle1-u04_wiops'=27214wr/s;;;0 'oracle1-u04_wlat'=205us;;;0
 
 #### check_purefb_alert.py
 
@@ -239,22 +239,22 @@ Check the whole FlashBlade performance indicators.
 
 check_purefb_perf.py 10.225.112.69 T-a1c1a9de-5d14-4f1d-9469-4e1853232ece
 
-PURE_FB_PERF OK - FB wlat is 0us | 'FB rbw'=0B/s;;;0 'FB riops'=0rd/s;;;0 'FB rlat'=0us;;;0 'FB wbw'=0B/s;;;0 'FB wiops'=0wr/s;;;0 'FB wlat'=0us;;;0
+PURE_FB_PERF OK - FB_wlat is 0us | 'FB_rbw'=0B/s;;;0 'FB_riops'=0rd/s;;;0 'FB_rlat'=0us;;;0 'FB_wbw'=0B/s;;;0 'FB_wiops'=0wr/s;;;0 'FB_wlat'=0us;;;0
 
 Check the NFS performance indicators.
 
 check_purefb_perf.py 10.225.112.69 T-a1c1a9de-5d14-4f1d-9469-4e1853232ece --proto nfs
 
-PURE_FB_NFS_PERF OK - FB wlat is 0us | 'FB rbw'=0B/s;;;0 'FB riops'=0rd/s;;;0 'FB rlat'=0us;;;0 'FB wbw'=0B/s;;;0 'FB wiops'=0wr/s;;;0 'FB wlat'=0us;;;0
+PURE_FB_NFS_PERF OK - FB_wlat is 0us | 'FB_rbw'=0B/s;;;0 'FB_riops'=0rd/s;;;0 'FB_rlat'=0us;;;0 'FB_wbw'=0B/s;;;0 'FB_wiops'=0wr/s;;;0 'FB_wlat'=0us;;;0
 
 Check the S3 performance indicators.
 
 check_purefb_perf.py 10.225.112.69 T-a1c1a9de-5d14-4f1d-9469-4e1853232ece --proto s3
 
-PURE_FB_S3_PERF OK - FB wlat is 0us | 'FB rbw'=0B/s;;;0 'FB riops'=0rd/s;;;0 'FB rlat'=0us;;;0 'FB wbw'=0B/s;;;0 'FB wiops'=0wr/s;;;0 'FB wlat'=0us;;;0
+PURE_FB_S3_PERF OK - FB_wlat is 0us | 'FB_rbw'=0B/s;;;0 'FB_riops'=0rd/s;;;0 'FB_rlat'=0us;;;0 'FB_wbw'=0B/s;;;0 'FB_+wiops'=0wr/s;;;0 'FB_wlat'=0us;;;0
 
 Check the HTTP performance indicators.
 
 check_purefb_perf.py 10.225.112.69 T-a1c1a9de-5d14-4f1d-9469-4e1853232ece --proto http
 
-PURE_FB_HTTP_PERF OK - FB wlat is 0us | 'FB rbw'=0B/s;;;0 'FB riops'=0rd/s;;;0 'FB rlat'=0us;;;0 'FB wbw'=0B/s;;;0 'FB wiops'=0wr/s;;;0 'FB wlat'=0us;;;
+PURE_FB_HTTP_PERF OK - FB_wlat is 0us | 'FB_rbw'=0B/s;;;0 'FB_riops'=0rd/s;;;0 'FB_rlat'=0us;;;0 'FB_wbw'=0B/s;;;0 'FB_wiops'=0wr/s;;;0 'FB_wlat'=0us;;;
