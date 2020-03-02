@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2018 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
 #
 # * Overview
 #
@@ -15,17 +15,8 @@
 #
 # * Dependencies
 #
-#  nagiosplugin      helper Python class library for Nagios plugins by Christian Kauhaus (http://pythonhosted.org/nagiosplugin)
+#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
 #  purity_fb         Pure Storage Python REST Client for FlashBlade (https://github.com/purestorage/purity_fb_python_client)
-
-__author__ = "Eugenio Grosso"
-__copyright__ = "Copyright 2018, Pure Storage Inc."
-__credits__ = "Christian Kauhaus"
-__license__ = "Apache v2.0"
-__version__ = "1.2"
-__maintainer__ = "Eugenio Grosso"
-__email__ = "geneg@purestorage.com"
-__status__ = "Production"
 
 """Pure Storage FlashBlade alert messages status
 
@@ -37,15 +28,14 @@ __status__ = "Production"
 
 import argparse
 import logging
+import logging.handlers
 import nagiosplugin
 import urllib3
 from purity_fb import PurityFb, rest
 
 
-#logging.basicConfig(level=logging.DEBUG)
-_log = logging.getLogger('nagiosplugin')
 
-class PureFBalerts(nagiosplugin.Resource):
+class PureFBalert(nagiosplugin.Resource):
     """Pure Storage FlashBlade active alerts
 
     Retrieves the general health state of a FlashBlade from the internal alerts.
@@ -55,37 +45,69 @@ class PureFBalerts(nagiosplugin.Resource):
     def __init__(self, endpoint, apitoken):
         self.endpoint = endpoint
         self.apitoken = apitoken
+        self.info = 0
+        self.warn = 0
+        self.crit = 0
+        self.logger = logging.getLogger(self.name)
+        handler = logging.handlers.SysLogHandler(address = '/dev/log')
+        handler.setLevel(logging.ERROR)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
     @property
     def name(self):
-        return 'PURE_FB_ALERTS'
+        return 'PURE_FB_ALERT'
 
     def get_alerts(self):
         """Gets active alerts from FlashBlade."""
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        fb = PurityFb(self.endpoint)
-        fb.disable_verify_ssl()
-        fb.login(self.apitoken)
-        fbinfo = fb.alerts.list_alerts(filter='(state=\'closing\' or state=\'open\') and (severity=\'warning\' or severity=\'critical\')')
-        fb.logout()
+        fbinfo = {}
+        try:
+            fb = PurityFb(self.endpoint)
+            fb.disable_verify_ssl()
+            fb.login(self.apitoken)
+            fbinfo = fb.alerts.list_alerts(filter="state='open'")
+            fb.logout()
+        except Exception as e:
+            self.logger.error('FB REST call returned "%s" ', e)
         return(fbinfo)
 
     def probe(self):
 
         fbinfo = self.get_alerts()
-        _log.debug('FB REST call returned "%s" ', fbinfo)
-        status = fbinfo.items
-        if len(fbinfo.items) == 0:
-            metric = nagiosplugin.Metric('FB_ALERTS', 0, context='default' )
-        else:
-            metric = nagiosplugin.Metric('FB_ALERTS', 1, context='default')
-        return metric
+        self.logger.debug('FB REST call returned "%s" ', fbinfo)
+        if not fbinfo:
+            return []
+        for msg in fbinfo.items:
+            severity = msg.severity
+            if severity == 'critical':
+                self.crit += 1
+            if severity == 'warning':
+                self.warn += 1
+            if severity == 'info':
+                self.info += 1
 
+        return [nagiosplugin.Metric('critical', self.crit, min=0),
+                nagiosplugin.Metric('warning', self.warn, min=0),
+                nagiosplugin.Metric('info', self.info, min=0)]
 
 def parse_args():
     argp = argparse.ArgumentParser()
     argp.add_argument('endpoint', help="FB hostname or ip address")
     argp.add_argument('apitoken', help="FB api_token")
+    argp.add_argument('--warning-crit', metavar='RANGE',
+                      help='warning if number of critical messages is outside RANGE')
+    argp.add_argument('--critical-crit', metavar='RANGE',
+                      help='critical if number of critical messages is outside RANGE')
+    argp.add_argument('--warning-warn', metavar='RANGE',
+                      help='warning if number of warning messages is outside RANGE')
+    argp.add_argument('--critical-warn', metavar='RANGE',
+                      help='critical if number of warning messages is outside RANGE')
+    argp.add_argument('--warning-info', metavar='RANGE',
+                      help='warning if number of info messages is outside RANGE')
+    argp.add_argument('--critical-info', metavar='RANGE',
+                      help='critical if number of info messages is outside RANGE')
     argp.add_argument('-v', '--verbose', action='count', default=0,
                       help='increase output verbosity (use up to 3 times)')
     argp.add_argument('-t', '--timeout', default=30,
@@ -96,8 +118,17 @@ def parse_args():
 @nagiosplugin.guarded
 def main():
     args = parse_args()
-    check = nagiosplugin.Check( PureFBalerts(args.endpoint, args.apitoken) )
-    check.add(nagiosplugin.ScalarContext('default', '', '@1:1'))
+    check = nagiosplugin.Check(
+        PureFBalert(args.endpoint, args.apitoken),
+        nagiosplugin.ScalarContext(
+            'critical', args.warning_crit, args.critical_crit,
+            fmt_metric='{value} critical messages'),
+        nagiosplugin.ScalarContext(
+            'warning', args.warning_warn, args.critical_warn,
+            fmt_metric='{value} warning messages'),
+        nagiosplugin.ScalarContext(
+            'info', args.warning_info, args.critical_info,
+            fmt_metric='{value} info messages'))
     check.main(args.verbose, args.timeout)
 
 if __name__ == '__main__':

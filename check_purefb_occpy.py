@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2018 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
 #
 # * Overview
 #
@@ -15,17 +15,8 @@
 #
 # * Dependencies
 #
-#  nagiosplugin      helper Python class library for Nagios plugins by Christian Kauhaus (http://pythonhosted.org/nagiosplugin)
+#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
 #  purity_fb         Pure Storage Python REST Client for FlashBlade (https://github.com/purestorage/purity_fb_python_client)
-
-__author__ = "Eugenio Grosso"
-__copyright__ = "Copyright 2018, Pure Storage Inc."
-__credits__ = "Christian Kauhaus"
-__license__ = "Apache v2.0"
-__version__ = "1.2"
-__maintainer__ = "Eugenio Grosso"
-__email__ = "geneg@purestorage.com"
-__status__ = "Production"
 
 """Pure Storage FlashBlade occupancy status
 
@@ -43,12 +34,12 @@ __status__ = "Production"
 
 import argparse
 import logging
+import logging.handlers
 import nagiosplugin
 import urllib3
 from purity_fb import PurityFb, rest
 
 
-_log = logging.getLogger('nagiosplugin')
 
 class PureFBoccpy(nagiosplugin.Resource):
     """Pure Storage FlashBlade  occupancy
@@ -69,6 +60,12 @@ class PureFBoccpy(nagiosplugin.Resource):
         else:
             self.type = ''
             self.volname = ''
+        self.logger = logging.getLogger(self.name)
+        handler = logging.handlers.SysLogHandler(address = '/dev/log')
+        handler.setLevel(logging.ERROR)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
     @property
     def name(self):
@@ -83,27 +80,30 @@ class PureFBoccpy(nagiosplugin.Resource):
     def get_occupancy(self):
         """Gets occupancy values from FlasgBlade ."""
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        fb = PurityFb(self.endpoint)
-        fb.disable_verify_ssl()
-        fb.login(self.apitoken)
-
-
-        if (self.volname):
-            fbinfo = fb.file_systems.list_file_systems(names=[self.volname])
-        elif (self.type == 'filesystem'):
-            fbinfo = fb.arrays.list_arrays_space(type='file-system')
-        elif (self.type == 'objectstore' ):
-            fbinfo = fb.arrays.list_arrays_space(type='object-store')
-        else:
-            fbinfo = fb.arrays.list_arrays_space()
-
-        fb.logout()
+        fbinfo = {}
+        try:
+            fb = PurityFb(self.endpoint)
+            fb.disable_verify_ssl()
+            fb.login(self.apitoken)
+            if (self.volname):
+                fbinfo = fb.file_systems.list_file_systems(names=[self.volname])
+            elif (self.type == 'filesystem'):
+                fbinfo = fb.arrays.list_arrays_space(type='file-system')
+            elif (self.type == 'objectstore' ):
+                fbinfo = fb.arrays.list_arrays_space(type='object-store')
+            else:
+                fbinfo = fb.arrays.list_arrays_space()
+            fb.logout()
+        except Exception as e:
+            self.logger.error('FB REST call returned "%s" ', e)
         return(fbinfo)
 
     def probe(self):
 
         fbinfo = self.get_occupancy()
-        _log.debug('FA REST call returned "%s" ', fbinfo)
+        if not fbinfo:
+            return ''
+        self.logger.debug('FA REST call returned "%s" ', fbinfo)
         if (self.volname):
             occupancy = int(fbinfo.items[0].space.virtual)
             metric = nagiosplugin.Metric(self.volname + ' occupancy', occupancy, 'B', min=0, context='occupancy')

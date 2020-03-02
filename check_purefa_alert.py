@@ -53,7 +53,7 @@ class PureFAalert(nagiosplugin.Resource):
 
     @property
     def name(self):
-        return 'PURE_FA_ALERTS'
+        return 'PURE_FA_ALERT'
 
     def get_alerts(self):
         """Gets active alerts from FlashArray."""

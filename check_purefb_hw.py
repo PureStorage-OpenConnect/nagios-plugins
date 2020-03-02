@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2018 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
 #
 # * Overview
 #
@@ -15,17 +15,8 @@
 #
 # * Dependencies
 #
-#  nagiosplugin      helper Python class library for Nagios plugins by Christian Kauhaus (http://pythonhosted.org/nagiosplugin)
+#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
 #  purity_fb         Pure Storage Python REST Client for FlashBlade (https://github.com/purestorage/purity_fb_python_client)
-
-__author__ = "Eugenio Grosso"
-__copyright__ = "Copyright 2018, Pure Storage Inc."
-__credits__ = "Christian Kauhaus"
-__license__ = "Apache v2.0"
-__version__ = "1.2"
-__maintainer__ = "Eugenio Grosso"
-__email__ = "geneg@purestorage.com"
-__status__ = "Production"
 
 """Pure Storage FlashBlade hardware components status
 
@@ -41,12 +32,12 @@ __status__ = "Production"
 
 import argparse
 import logging
+import logging.handlers
 import nagiosplugin
 import urllib3
 from purity_fb import PurityFb, Hardware, rest
 
 
-_log = logging.getLogger('nagiosplugin')
 
 class PureFBhw(nagiosplugin.Resource):
     """Pure Storage FlashBlade hardware component status
@@ -59,6 +50,12 @@ class PureFBhw(nagiosplugin.Resource):
         self.endpoint = endpoint
         self.apitoken = apitoken
         self.component = component
+        self.logger = logging.getLogger(self.name)
+        handler = logging.handlers.SysLogHandler(address = '/dev/log')
+        handler.setLevel(logging.ERROR)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
     @property
     def name(self):
@@ -67,19 +64,27 @@ class PureFBhw(nagiosplugin.Resource):
     def get_status(self):
         """Gets hardware component status from FlashBlade."""
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        fb = PurityFb(self.endpoint)
-        fb.disable_verify_ssl()
-        fb.login(self.apitoken)
-        fbinfo = fb.hardware.list_hardware(names=[self.component])
-        fb.logout()
+        fbinfo={}
+        try:
+            fb = PurityFb(self.endpoint)
+            fb.disable_verify_ssl()
+            fb.login(self.apitoken)
+            fbinfo = fb.hardware.list_hardware(names=[self.component])
+            fb.logout()
+        except Exception as e:
+            self.logger.error('FB REST call returned "%s" ', e)
         return(fbinfo)
 
     def probe(self):
 
         fbinfo = self.get_status()
-        _log.debug('FB REST call returned "%s" ', fbinfo)
+        if not fbinfo:
+            return []
+        self.logger.debug('FB REST call returned "%s" ', fbinfo)
         status = fbinfo.items[0].status
-        if (status == 'healthy') or (status == 'unused'):
+        if status == 'unused':
+            return []
+        if status == 'healthy':
             metric = nagiosplugin.Metric(self.component + ' status', 0, context='default' )
         else:
             metric = nagiosplugin.Metric(self.component + ' status', 1, context='default')

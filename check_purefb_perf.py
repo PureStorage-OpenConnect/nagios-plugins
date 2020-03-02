@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2018 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
 #
 # * Overview
 #
@@ -15,17 +15,8 @@
 #
 # * Dependencies
 #
-#  nagiosplugin      helper Python class library for Nagios plugins by Christian Kauhaus (http://pythonhosted.org/nagiosplugin)
+#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
 #  purity_fb         Pure Storage Python REST Client for FlashBlade (https://github.com/purestorage/purity_fb_python_client)
-
-__author__ = "Eugenio Grosso"
-__copyright__ = "Copyright 2018, Pure Storage Inc."
-__credits__ = "Christian Kauhaus"
-__license__ = "Apache v2.0"
-__version__ = "1.2"
-__maintainer__ = "Eugenio Grosso"
-__email__ = "geneg@purestorage.com"
-__status__ = "Production"
 
 """Pure Storage FlashBlade performance indicators
 
@@ -47,12 +38,11 @@ __status__ = "Production"
 
 import argparse
 import logging
+import logging.handlers
 import nagiosplugin
 import urllib3
 from purity_fb import PurityFb, ArrayPerformance, rest
 
-
-_log = logging.getLogger('nagiosplugin')
 
 
 class PureFBperf(nagiosplugin.Resource):
@@ -66,6 +56,12 @@ class PureFBperf(nagiosplugin.Resource):
         self.endpoint = endpoint
         self.apitoken = apitoken
         self.proto = proto
+        self.logger = logging.getLogger(self.name)
+        handler = logging.handlers.SysLogHandler(address = '/dev/log')
+        handler.setLevel(logging.ERROR)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
     @property
     def name(self):
@@ -81,30 +77,37 @@ class PureFBperf(nagiosplugin.Resource):
     def get_perf(self):
         """Gets performance counters from FlashBlade."""
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        fb = PurityFb(self.endpoint)
-        fb.disable_verify_ssl()
-        fb.login(self.apitoken)
+        fbinfo = {}
+        try:
+            fb = PurityFb(self.endpoint)
+            fb.disable_verify_ssl()
+            fb.login(self.apitoken)
 
-        if (self.proto is None):
-            fbinfo = fb.arrays.list_arrays_performance()
-        else:
-            fbinfo = fb.arrays.list_arrays_performance(protocol=self.proto)
+            if (self.proto is None):
+                fbinfo = fb.arrays.list_arrays_performance()
+            else:
+                fbinfo = fb.arrays.list_arrays_performance(protocol=self.proto)
 
-        fb.logout()
+            fb.logout()
+        except Exception as e:
+            self.logger.error('FB REST call returned "%s" ', e)
+
         return(fbinfo)
 
 
     def probe(self):
 
         fbinfo = self.get_perf()
-        _log.debug('FB REST call returned "%s" ', fbinfo)
+        if not fbinfo:
+            return []
+        self.logger.debug('FB REST call returned "%s" ', fbinfo)
         wlat = int(fbinfo.items[0].usec_per_write_op)
         rlat = int(fbinfo.items[0].usec_per_read_op)
         wbw = int(fbinfo.items[0].input_per_sec)
         rbw = int(fbinfo.items[0].output_per_sec)
         wiops = int(fbinfo.items[0].writes_per_sec)
         riops = int(fbinfo.items[0].reads_per_sec)
-        mlabel = 'FB '
+        mlabel = 'FB_'
 
         metrics = [
                     nagiosplugin.Metric(mlabel + 'wlat', wlat, 'us', min=0, context='wlat'),
