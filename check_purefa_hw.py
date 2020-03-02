@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-# Copyright (c) 2018 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
 #
 # * Overview
 #
 # This short Nagios/Icinga plugin code shows  how to build a simple plugin to monitor Pure Storage FlashArrays.
-# The Pure Storage Python REST Client is used to query the FlashArray occupancy indicators.
-# Plugin leverages the remarkably helpful nagiosplugin library by Christian Kauhaus.
+# The Pure Storage Python REST Client is used to query the FlashArray.
 #
 # * Installation
 #
@@ -15,19 +14,10 @@
 #
 # * Dependencies
 #
-#  nagiosplugin      helper Python class library for Nagios plugins by Christian Kauhaus (http://pythonhosted.org/nagiosplugin)
+#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
 #  purestorage       Pure Storage Python REST Client (https://github.com/purestorage/rest-client)
 
-__author__ = "Eugenio Grosso"
-__copyright__ = "Copyright 2018, Pure Storage Inc."
-__credits__ = "Christian Kauhaus"
-__license__ = "Apache v2.0"
-__version__ = "1.2"
-__maintainer__ = "Eugenio Grosso"
-__email__ = "geneg@purestorage.com"
-__status__ = "Production"
-
-"""Pure Storage FlashArray occupancy status
+"""Pure Storage FlashArray hardware components status
 
    Nagios plugin to retrieve the current status of hardware components from a Pure Storage FlashArray.
    Hardware status indicators are collected from the target FA using the REST call.
@@ -43,17 +33,16 @@ __status__ = "Production"
 
 import argparse
 import logging
+import logging.handlers
 import nagiosplugin
 import purestorage
 import urllib3
 
 
-_log = logging.getLogger('nagiosplugin')
-
 class PureFAhw(nagiosplugin.Resource):
-    """Pure Storage FlashArray overall occupancy
+    """Pure Storage FlashArray hardware status
 
-    Calculates the overall FA storage occupancy
+    Retrieves FA hardware component status
 
     """
 
@@ -61,25 +50,37 @@ class PureFAhw(nagiosplugin.Resource):
         self.endpoint = endpoint
         self.apitoken = apitoken
         self.component = component
+        self.logger = logging.getLogger(self.name)
+        handler = logging.handlers.SysLogHandler(address = '/dev/log')
+        handler.setLevel(logging.ERROR)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
     @property
     def name(self):
-        return 'PURE_FA_' + str(self.component)
+        return 'PURE_FA_HW_' + str(self.component)
 
     def get_status(self):
         """Gets hardware element status from flasharray."""
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        fa = purestorage.FlashArray(self.endpoint, api_token=self.apitoken)
-        fainfo = fa.get_hardware(component=self.component)
-        fa.invalidate_cookie()
+        fainfo={}
+        try:
+            fa = purestorage.FlashArray(self.endpoint, api_token=self.apitoken)
+            fainfo = fa.get_hardware(component=self.component)
+            fa.invalidate_cookie()
+        except Exception as e:
+            self.logger.error('FA REST call returned "%s" ', e)
         return(fainfo)
 
     def probe(self):
 
         fainfo = self.get_status()
-        _log.debug('FA REST call returned "%s" ', fainfo)
         status = fainfo.get('status')
-        if (status == 'ok') or (status == 'not_installed'):
+        name = fainfo.get('name')
+        if (status == 'not_installed') or (name != self.component):
+            return []
+        if (status == 'ok'):
             metric = nagiosplugin.Metric(self.component + ' status', 0, context='default' )
         else:
             metric = nagiosplugin.Metric(self.component + ' status', 1, context='default')

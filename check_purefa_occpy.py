@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-# Copyright (c) 2018 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
 #
 # * Overview
 #
 # This short Nagios/Icinga plugin code shows  how to build a simple plugin to monitor Pure Storage FlashArrays.
 # The Pure Storage Python REST Client is used to query the FlashArray occupancy indicators.
-# Plugin leverages the remarkably helpful nagiosplugin library by Christian Kauhaus.
 #
 # * Installation
 #
@@ -15,17 +14,8 @@
 #
 # * Dependencies
 #
-#  nagiosplugin      helper Python class library for Nagios plugins by Christian Kauhaus (http://pythonhosted.org/nagiosplugin)
+#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
 #  purestorage       Pure Storage Python REST Client (https://github.com/purestorage/rest-client)
-
-__author__ = "Eugenio Grosso"
-__copyright__ = "Copyright 2018, Pure Storage Inc."
-__credits__ = "Christian Kauhaus"
-__license__ = "Apache v2.0"
-__version__ = "1.2"
-__maintainer__ = "Eugenio Grosso"
-__email__ = "geneg@purestorage.com"
-__status__ = "Production"
 
 """Pure Storage FlashArray occupancy status
 
@@ -41,12 +31,11 @@ __status__ = "Production"
 
 import argparse
 import logging
+import logging.handlers
 import nagiosplugin
 import purestorage
 import urllib3
 
-
-_log = logging.getLogger('nagiosplugin')
 
 class PureFAoccpy(nagiosplugin.Resource):
     """Pure Storage FlashArray  occupancy
@@ -59,6 +48,12 @@ class PureFAoccpy(nagiosplugin.Resource):
         self.endpoint = endpoint
         self.apitoken = apitoken
         self.volname = volname
+        self.logger = logging.getLogger(self.name)
+        handler = logging.handlers.SysLogHandler(address = '/dev/log')
+        handler.setLevel(logging.ERROR)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
     @property
     def name(self):
@@ -71,19 +66,23 @@ class PureFAoccpy(nagiosplugin.Resource):
     def get_space(self):
         """Gets performance counters from flasharray."""
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        fa = purestorage.FlashArray(self.endpoint, api_token=self.apitoken)
-        if (self.volname is None):
-            fainfo = fa.get(space=True)[0]
-        else:
-            fainfo = fa.get_volume(self.volname, space=True)
-
-        fa.invalidate_cookie()
+        fainfo = {}
+        try:
+            fa = purestorage.FlashArray(self.endpoint, api_token=self.apitoken)
+            if (self.volname is None):
+                fainfo = fa.get(space=True)[0]
+            else:
+                fainfo = fa.get_volume(self.volname, space=True)
+            fa.invalidate_cookie()
+        except Exception as e:
+            self.logger.error('FA REST call returned "%s" ', e)
         return(fainfo)
 
     def probe(self):
 
         fainfo = self.get_space()
-        _log.debug('FA REST call returned "%s" ', fainfo)
+        if not fainfo:
+            return ''
         if (self.volname is None):
             occupancy = round(float(fainfo.get('total'))/float(fainfo.get('capacity')), 2) * 100
             metric = nagiosplugin.Metric('FA occupancy', occupancy, '%', min=0, max=100, context='occupancy')
