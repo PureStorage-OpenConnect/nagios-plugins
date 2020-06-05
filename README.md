@@ -131,7 +131,7 @@ Check the whole FlashArray performance indicators.
 
 check_purefa_perf.py 10.225.112.81 c4eb5b21-4122-b871-8b0f-684bf72b5283
 
-PURE_FA_PERF OK - FA wlat is 237us | 'FA_rbw'=328977030B/s;;;0 'FA_riops'=80269rd/s;;;0 'FA_rlat'=419us;;;0 'FA_wbw'=110185869B/s;;;0 'FA_wiops'=26798wr/s;;;0 'FA_wlat'=237us;;;0
+PURE_FA_PERF OK - 'FA wlat' is 237us | 'FA rbw'=328977030B/s;;;0 'FA riops'=80269rd/s;;;0 'FA rlat'=419us;;;0 'FA wbw'=110185869B/s;;;0 'FA wiops'=26798wr/s;;;0 'FA wlat'=237us;;;0
 
 Check the volume *oracle1-u04* performance indicators
 
