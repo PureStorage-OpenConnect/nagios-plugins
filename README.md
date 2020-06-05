@@ -118,20 +118,20 @@ The plugin has two mandatory arguments:  'endpoint', which specifies the target 
 specifies the autentication token for the REST call session. A third optional parameter, 'volname' can
 be used to check a specific named volume.
 In addition to these parameters, the plugin accepts multiple warning and critical threshold parameters in positional order:
-   1st threshold refers to write latency
-   2nd threshold refers to read latency
-   3rd threshold refers to write bandwidth
-   4th threshold refers to read bandwidth
-   5th threshold refers to write IOPS
-   6th threshold refers to read IOPS.
+1st threshold refers to write latency
+2nd threshold refers to read latency
+3rd threshold refers to write bandwidth
+4th threshold refers to read bandwidth
+5th threshold refers to write IOPS
+6th threshold refers to read IOPS.
  
 Abbreviations:
-  rbw   -> Read bandwidth (Byte/sec)
-  riops -> Read IOPS
-  rlat  -> Read latency (microseconds)
-  wbw   -> Write bandwidth (Byte/sec)
-  wiops -> Write IOPS
-  wlat  -> Write latency (microseconds)
+rbw   -> Read bandwidth (Byte/sec)
+riops -> Read IOPS
+rlat  -> Read latency (microseconds)
+wbw   -> Write bandwidth (Byte/sec)
+wiops -> Write IOPS
+wlat  -> Write latency (microseconds)
   
  
 ###### Example
