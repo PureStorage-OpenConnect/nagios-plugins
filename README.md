@@ -125,6 +125,15 @@ In addition to these parameters, the plugin accepts multiple warning and critica
    5th threshold refers to write IOPS
    6th threshold refers to read IOPS.
  
+Abbreviations:
+  rbw   -> Read bandwidth (Byte/sec)
+  riops -> Read IOPS
+  rlat  -> Read latency (microseconds)
+  wbw   -> Write bandwidth (Byte/sec)
+  wiops -> Write IOPS
+  wlat  -> Write latency (microseconds)
+  
+ 
 ###### Example
 
 Check the whole FlashArray performance indicators.
