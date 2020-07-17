@@ -72,7 +72,9 @@ class PureFAalert(nagiosplugin.Resource):
 
         fainfo = self.get_alerts()
         if not fainfo:
-            return []
+            return [nagiosplugin.Metric('critical', 0, min=0),
+                    nagiosplugin.Metric('warning', 0, min=0),
+                    nagiosplugin.Metric('info', 0, min=0)]
         # Increment each counter for each type of event
         for alert in fainfo:
             if alert['current_severity'] == 'critical':
