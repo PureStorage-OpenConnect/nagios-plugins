@@ -34,7 +34,15 @@ import logging
 import logging.handlers
 import nagiosplugin
 import purestorage
-import urllib3
+
+# Disable warnings using urllib3 embedded in requests or directly
+try:
+    import requests
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+except:
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class PureFAoccpy(nagiosplugin.Resource):
@@ -65,7 +73,6 @@ class PureFAoccpy(nagiosplugin.Resource):
 
     def get_space(self):
         """Gets performance counters from flasharray."""
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         fainfo = {}
         try:
             fa = purestorage.FlashArray(self.endpoint, api_token=self.apitoken)

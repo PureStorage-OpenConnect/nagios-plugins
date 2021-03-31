@@ -36,9 +36,16 @@ import argparse
 import logging
 import logging.handlers
 import nagiosplugin
-import urllib3
 from purity_fb import PurityFb, rest
 
+# Disable warnings using urllib3 embedded in requests or directly
+try:
+    import requests
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+except:
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class PureFBoccpy(nagiosplugin.Resource):
@@ -79,7 +86,6 @@ class PureFBoccpy(nagiosplugin.Resource):
 
     def get_occupancy(self):
         """Gets occupancy values from FlasgBlade ."""
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         fbinfo = {}
         try:
             fb = PurityFb(self.endpoint)

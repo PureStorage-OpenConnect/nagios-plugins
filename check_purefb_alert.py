@@ -30,9 +30,16 @@ import argparse
 import logging
 import logging.handlers
 import nagiosplugin
-import urllib3
 from purity_fb import PurityFb, rest
 
+# Disable warnings using urllib3 embedded in requests or directly
+try:
+    import requests
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+except:
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class PureFBalert(nagiosplugin.Resource):
@@ -61,7 +68,6 @@ class PureFBalert(nagiosplugin.Resource):
 
     def get_alerts(self):
         """Gets active alerts from FlashBlade."""
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         fbinfo = {}
         try:
             fb = PurityFb(self.endpoint)
