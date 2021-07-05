@@ -91,7 +91,6 @@ class PureFBperf(nagiosplugin.Resource):
             fb.logout()
         except Exception as e:
             raise nagiosplugin.CheckError(f'FA REST call returned "{e}"')
-
         return(fbinfo)
 
 
