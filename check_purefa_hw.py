@@ -87,7 +87,10 @@ class PureFAhw(nagiosplugin.Resource):
             metrics = ", ".join([component['name'] + ': ' + component['status'] for component in failedcomponents])
             metric = nagiosplugin.Metric(metrics + ' status', 1, context='default')
         else:
-            metric = nagiosplugin.Metric('All hardware component(s) are OK' + ' status', 0, context='default' )
+            if self.component is None:
+                metric = nagiosplugin.Metric('All hardware components are OK' + ' status', 0, context='default' )
+            else:
+                metric = nagiosplugin.Metric(f'{self.component} hardware is OK' + ' status', 0, context='default' )
         return metric
 
 
