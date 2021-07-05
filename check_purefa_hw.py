@@ -67,23 +67,24 @@ class PureFAhw(nagiosplugin.Resource):
         fainfo={}
         try:
             fa = purestorage.FlashArray(self.endpoint, api_token=self.apitoken)
-            fainfo = fa.get_hardware(component=self.component)
+            if self.component is None:
+                fainfo = fa.list_hardware()
+            else:
+                fainfo = [fa.get_hardware(self.component)]
             fa.invalidate_cookie()
         except Exception as e:
-            self.logger.error('FA REST call returned "%s" ', e)
+            raise nagiosplugin.CheckError('FA REST call returned "%s" ', e)
         return(fainfo)
 
     def probe(self):
-
         fainfo = self.get_status()
-        status = fainfo.get('status')
-        name = fainfo.get('name')
-        if (status == 'not_installed') or (name != self.component):
-            return []
-        if (status == 'ok'):
-            metric = nagiosplugin.Metric(self.component + ' status', 0, context='default' )
+        failedcomponents = [component for component in fainfo if not component['status'] in ['ok', 'not_installed']]
+
+        if failedcomponents:
+            metrics = ", ".join([component['name'] + ': ' + component['status'] for component in failedcomponents])
+            metric = nagiosplugin.Metric(metrics + ' status', 1, context='default')
         else:
-            metric = nagiosplugin.Metric(self.component + ' status', 1, context='default')
+            metric = nagiosplugin.Metric('All hardware component(s) are OK' + ' status', 0, context='default' )
         return metric
 
 
@@ -91,7 +92,7 @@ def parse_args():
     argp = argparse.ArgumentParser()
     argp.add_argument('endpoint', help="FA hostname or ip address")
     argp.add_argument('apitoken', help="FA api_token")
-    argp.add_argument('component', help="FA hardware component")
+    argp.add_argument('--component', help="FA hardware component, if not specified all components are checked")
     argp.add_argument('-v', '--verbose', action='count', default=0,
                       help='increase output verbosity (use up to 3 times)')
     argp.add_argument('-t', '--timeout', default=30,
