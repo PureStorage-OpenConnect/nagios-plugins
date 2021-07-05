@@ -73,7 +73,7 @@ class PureFAhw(nagiosplugin.Resource):
                 fainfo = [fa.get_hardware(self.component)]
             fa.invalidate_cookie()
         except Exception as e:
-            raise nagiosplugin.CheckError('FA REST call returned "%s" ', e)
+            raise nagiosplugin.CheckError(f'FA REST call returned "{e}"')
         return(fainfo)
 
     def probe(self):
