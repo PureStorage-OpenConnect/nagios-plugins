@@ -59,7 +59,10 @@ class PureFAhw(nagiosplugin.Resource):
 
     @property
     def name(self):
-        return 'PURE_FA_HW_' + str(self.component)
+        if (self.component is None):
+            return 'PURE_FA_HW'
+        else:
+            return 'PURE_FA_HW_' + str(self.component)
 
     def get_status(self):
         """Gets hardware element status from flasharray."""
