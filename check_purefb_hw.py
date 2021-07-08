@@ -34,9 +34,16 @@ import argparse
 import logging
 import logging.handlers
 import nagiosplugin
-import urllib3
 from purity_fb import PurityFb, Hardware, rest
 
+# Disable warnings using urllib3 embedded in requests or directly
+try:
+    import requests
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+except:
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class PureFBhw(nagiosplugin.Resource):
@@ -63,7 +70,6 @@ class PureFBhw(nagiosplugin.Resource):
 
     def get_status(self):
         """Gets hardware component status from FlashBlade."""
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         fbinfo={}
         try:
             fb = PurityFb(self.endpoint)
