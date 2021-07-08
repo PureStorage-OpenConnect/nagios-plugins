@@ -95,7 +95,7 @@ class PureFBoccpy(nagiosplugin.Resource):
                 fbinfo = fb.arrays.list_arrays_space()
             fb.logout()
         except Exception as e:
-            self.logger.error('FB REST call returned "%s" ', e)
+            raise nagiosplugin.CheckError(f'FA REST call returned "{e}"')
         return(fbinfo)
 
     def probe(self):

@@ -82,7 +82,7 @@ class PureFAperf(nagiosplugin.Resource):
                 fainfo = fa.get_volume(self.volname, action='monitor')[0]
             fa.invalidate_cookie()
         except Exception as e:
-            self.logger.error('FA REST call returned "%s" ', e)
+            raise nagiosplugin.CheckError(f'FA REST call returned "{e}"')
         return(fainfo)
 
     def probe(self):
