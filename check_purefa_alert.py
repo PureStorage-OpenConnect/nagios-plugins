@@ -71,7 +71,7 @@ class PureFAalert(nagiosplugin.Resource):
             fainfo = fa.list_messages(open = True)
             fa.invalidate_cookie()
         except Exception as e:
-            raise nagiosplugin.CheckError(f'FA REST call returned "{e}"')
+            raise nagiosplugin.CheckError('FA REST call returned "{e}"')
         
         return(fainfo)
 
