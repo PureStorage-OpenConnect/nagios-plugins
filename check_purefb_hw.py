@@ -66,6 +66,7 @@ class PureFBhw(nagiosplugin.Resource):
 
     def get_status(self):
         """Get hardware component status from FlashBlade."""
+        fbinfo = []
         try:
             client = flashblade.Client(target=self.endpoint,
                                        api_token=self.apitoken,
@@ -82,19 +83,16 @@ class PureFBhw(nagiosplugin.Resource):
 
     def probe(self):
         fbinfo = self.get_status()
-        if fbinfo:
-            failedcomponents = [component for component in fbinfo if component.status not  in ['healthy', 'unused', 'not_installed']]
+        failedcomponents = [component for component in fbinfo if component.status not  in ['healthy', 'unused', 'not_installed']]
 
-            if failedcomponents:
-                metrics = ", ".join([component.name + ': ' + component.status for component in failedcomponents])
-                metric = nagiosplugin.Metric(metrics + '. Status', 1, context='default')
-            else:
-                if self.component is None:
-                    metric = nagiosplugin.Metric('All hardware components are OK. Status', 0, context='default' )
-                else:
-                    metric = nagiosplugin.Metric('{} hardware is OK. Status'.format(self.component), 0, context='default' )
+        if failedcomponents:
+            metrics = ", ".join([component.name + ': ' + component.status for component in failedcomponents])
+            metric = nagiosplugin.Metric(metrics + '. Status', 1, context='default')
         else:
-            metric = []
+            if self.component is None:
+                metric = nagiosplugin.Metric('All hardware components are OK. Status', 0, context='default' )
+            else:
+                metric = nagiosplugin.Metric('{} hardware is OK. Status'.format(self.component), 0, context='default' )
         return metric
 
 

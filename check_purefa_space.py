@@ -71,6 +71,7 @@ class PureFAspace(nagiosplugin.Resource):
 
     def get_space(self):
         """Get space counters from flasharray."""
+        fainfo = {}
         try:
             client = flasharray.Client(target=self.endpoint,
                                    api_token=self.apitoken,
@@ -87,8 +88,6 @@ class PureFAspace(nagiosplugin.Resource):
 
     def probe(self):
         fainfo = self.get_space()
-        if not fainfo:
-            return ''
         if (self.volname is None):
             if self.percentage:
                 space = round(float(fainfo.space.total_physical) / float(fainfo.capacity), 2) * 100

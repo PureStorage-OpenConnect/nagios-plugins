@@ -54,11 +54,8 @@ class PureFBspace(nagiosplugin.Resource):
     def __init__(self, endpoint, apitoken, type, volname):
         self.endpoint = endpoint
         self.apitoken = apitoken
-        if (type == 'fs'):
-            self.type = 'file-system'
-            self.volname = volname
-        elif (type == 'obj'):
-            self.type = 'object-store'
+        if type in ['file-system', 'object-store']:
+            self.type = type
             self.volname = volname
         else:
             self.type = 'array'
@@ -82,7 +79,7 @@ class PureFBspace(nagiosplugin.Resource):
 
     def get_space(self):
         """Get space values from FlashBlade."""
-        fbinfo = []
+        fbinfo = {}
         try:
             client = flashblade.Client(target=self.endpoint,
                                        api_token=self.apitoken,
@@ -121,7 +118,7 @@ def parse_args():
     argp.add_argument('endpoint', help="FB hostname or ip address")
     argp.add_argument('apitoken', help="FB api_token")
     group = argp.add_mutually_exclusive_group()
-    group.add_argument('--fs', action='store', nargs='?', const='#FS#', help='specify NFS volume name to check a specific volume')
+    group.add_argument('--nfs', action='store', nargs='?', const='#FS#', help='specify NFS volume name to check a specific volume')
     group.add_argument('--s3', action='store', nargs='?', const='#BKT#', help='specify bucket name to check a specific bucket')
 
 
@@ -141,12 +138,12 @@ def main():
     args = parse_args()
     vol = ''
     type = ''
-    if (args.fs is not None):
-        type = 'fs'
-        if (args.fs != '#FS#'):
-            vol = args.fs
+    if (args.nfs is not None):
+        type = 'file-system'
+        if (args.nfs != '#FS#'):
+            vol = args.nfs
     elif (args.s3 is not None):
-        type = 'obj'
+        type = 'object-store'
         if (args.s3 != '#BKT#'):
             vol = args.s3
 

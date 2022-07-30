@@ -67,6 +67,7 @@ class PureFApod(nagiosplugin.Resource):
 
     def get_status(self, perf=False):
         """Gets pod status from flasharray."""
+        fainfo = []
         try:
             client = flasharray.Client(target=self.endpoint,
                                        api_token=self.apitoken,
@@ -82,7 +83,7 @@ class PureFApod(nagiosplugin.Resource):
                 else:
                     res = client.get_pods_performance(names = [self.pod])
             if isinstance(res, flasharray.ValidResponse):
-                fainfo = res.items
+                fainfo = list(res.items)
         except Exception as e:
             raise nagiosplugin.CheckError('FA REST call returned "{}"'.format(e))
         return(fainfo)

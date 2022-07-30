@@ -71,6 +71,7 @@ class PureFAhw(nagiosplugin.Resource):
 
     def get_status(self):
         """Get hardware components status from flasharray."""
+        fainfo = []
         try:
             client = flasharray.Client(target=self.endpoint,
                                    api_token=self.apitoken,

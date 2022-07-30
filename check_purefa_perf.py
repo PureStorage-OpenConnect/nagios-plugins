@@ -75,6 +75,7 @@ class PureFAperf(nagiosplugin.Resource):
 
     def get_perf(self):
         """Get performance counters from flasharray."""
+        fainfo = {}
         try:
             client = flasharray.Client(target=self.endpoint,
                                        api_token=self.apitoken,
@@ -84,10 +85,10 @@ class PureFAperf(nagiosplugin.Resource):
             else:
                 res = client.get_volumes_performance(names=[self.volname])
             if isinstance(res, flasharray.ValidResponse):
-                fainfo = res.items
+                fainfo = res.items.next()
         except Exception as e:
             raise nagiosplugin.CheckError('FA REST call returned "{}"'.format(e))
-        return(list(fainfo))
+        return(fainfo)
 
     def probe(self):
         fainfo = self.get_perf()

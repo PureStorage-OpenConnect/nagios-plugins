@@ -79,6 +79,7 @@ class PureFBperf(nagiosplugin.Resource):
 
     def get_perf(self):
         """Get performance counters from FlashBlade."""
+        fbinfo = {}
         try:
             client = flashblade.Client(target=self.endpoint,
                                        api_token=self.apitoken,

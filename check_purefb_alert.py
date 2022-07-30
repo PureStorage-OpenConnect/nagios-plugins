@@ -65,6 +65,7 @@ class PureFBalert(nagiosplugin.Resource):
 
     def get_alerts(self):
         """Gets active alerts from FlashBlade."""
+        fbinfo = []
         try:
             client = flashblade.Client(target=self.endpoint,
                                        api_token=self.apitoken,
@@ -80,8 +81,6 @@ class PureFBalert(nagiosplugin.Resource):
 
         fbinfo = self.get_alerts()
         self.logger.debug('FB REST call returned "%s" ', fbinfo)
-        if not fbinfo:
-            return []
         for msg in fbinfo:
             if msg.state != 'open':
                 continue

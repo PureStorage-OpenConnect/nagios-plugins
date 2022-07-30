@@ -60,6 +60,7 @@ class PureFAalert(nagiosplugin.Resource):
 
     def get_alerts(self):
         """Gets active alerts from FlashArray."""
+        fainfo = []
         try:
             client = flasharray.Client(target=self.endpoint,
                                    api_token=self.apitoken,
