@@ -6,11 +6,11 @@ A repository of plugins and extensions to monitor Pure Storage FlashArray and Fl
 
 * [check_purefa_alert.py](check_purefa_alert.py) Simple plugin for monitoring Pure Storage FlashArray alerts status.
 * [check_purefa_hw.py](check_purefa_hw.py) Simple plugin for monitoring Pure Storage FlashArray hardware components.
-* [check_purefa_occpy.py](check_purefa_occpy.py) Simple plugin for monitoring Pure Storage FlashArray space occupancy (global/per volume).
+* [check_purefa_space.py](check_purefa_space.py) Simple plugin for monitoring Pure Storage FlashArray space occupancy (global/per volume).
 * [check_purefa_perf.py](check_purefa_perf.py) Simple plugin for monitoring Pure Storage FlashArray performance metrics (global/per volume).
 * [check_purefb_alert.py](check_purefb_alert.py) Simple plugin for monitoring Pure Storage FlashBlade alerts status.
 * [check_purefb_hw.py](check_purefb_hw.py) Simple plugin for monitoring Pure Storage FlashBlade hardware components.
-* [check_purefb_occpy.py](check_purefb_occpy.py) Simple plugin for monitoring Pure Storage FlashBlade space occupancy (global/object store/per shared filesystem).
+* [check_purefb_space.py](check_purefb_space.py) Simple plugin for monitoring Pure Storage FlashBlade space occupancy (global/object store/per shared filesystem).
 * [check_purefb_perf.py](check_purefb_perf.py) Simple plugin for monitoring Pure Storage FlashBlade performance metrics (global/per protocol).
 
 ### Installation
@@ -92,16 +92,16 @@ Storage occupancy indicators are collected from the target FA using the REST cal
 
 Check the whole FlashArray space usage:
 
-check_purefa_occpy.py 10.225.112.81 c4eb5b21-4122-b871-8b0f-684bf72b5283
+check_purefa_space.py 10.225.112.81 c4eb5b21-4122-b871-8b0f-684bf72b5283
 
-PURE_FA_OCCUPANCY OK - FA occupancy is 66% | 'FA occupancy'=66.0%;;;0;100
+PURE_FA_SPACE OK - FA space is 66% | 'FA space'=66.0%;;;0;100
 
 
 Check volume *oracle-u04* occupancy
 
-check_purefa_occpy.py 10.225.112.81 c4eb5b21-4122-b871-8b0f-684bf72b5283 --vol oracle1-u04
+check_purefa_space.py 10.225.112.81 c4eb5b21-4122-b871-8b0f-684bf72b5283 --vol oracle1-u04
 
-PURE_FA_VOL_OCCUPANCY OK - z-oracle1-u04 occupancy is 52624121069B | 'oracle1-u04 occupancy'=52624121069B;;;0
+PURE_FA_VOL_SPACE OK - z-oracle1-u04 space is 52624121069B | 'oracle1-u04 space'=52624121069B;;;0
 
 #### check_purefa_perf.py
 Nagios plugin to retrieve the six (6) basic KPIs from a Pure Storage FlashArray.
@@ -186,14 +186,14 @@ check_purefb_hw.py 10.225.112.69 T-a1c1a9de-5d14-4f1d-9469-4e1853232ece  CH1.FM1
 
 PURE_FB_CH1.FM1 OK - CH1.FM1 status is 0 | 'CH1.FM1 status'=0;1;1
 
-#### check_purefb_occpy.py
+#### check_purefb_space.py
 
 Nagios plugin to retrieve the overall occupancy from a Pure Storage FlashBlade, or from a single volume, or from the object store.
 Storage occupancy indicators are collected from the target FB using the REST call.
 
 ##### Syntax
 
- *check_purefb_occpy.py endpoint api_token [--fs [volname]| --s3] [-w RANGE] [-c RANGE]*
+ *check_purefb_space.py endpoint api_token [--fs [volume]| --s3 [bucket]] [-w RANGE] [-c RANGE]*
 
 The plugin has two mandatory arguments:  'endpoint', which specifies the target FB and 'apitoken', which
 specifies the autentication token for the REST call session. A third optional parameter, 'volname' or 'objectstore' can
@@ -205,21 +205,21 @@ occupancy, while they must be integer byte units if checking a single volume.
 
 Check the whole FlashBlade occupancy:
 
-check_purefb_occpy.py 10.225.112.69 T-a1c1a9de-5d14-4f1d-9469-4e1853232ece
+check_purefb_space.py 10.225.112.69 T-a1c1a9de-5d14-4f1d-9469-4e1853232ece
 
-PURE_FB_OCCUPANCY OK - FB occupancy is 21% | 'FB occupancy'=21.0%;;;0;100
+PURE_FB_SPACE OK - FB space is 21% | 'FB space'=21.0%;;;0;100
 
 Check volume *oracle-u01* occupancy
 
-./check_purefb_occpy.py 10.225.112.69 T-a1c1a9de-5d14-4f1d-9469-4e1853232ece --fs oracle-u01
+./check_purefb_space.py 10.225.112.69 T-a1c1a9de-5d14-4f1d-9469-4e1853232ece --fs oracle-u01
 
-PURE_FB_VOL_OCCUPANCY OK - oracle-u01 occupancy is 193883707392B | 'oracle-u01 occupancy'=193883707392B;;;0
+PURE_FB_SPACE OK - oracle-u01 space is 193883707392B | 'oracle-u01 space'=193883707392B;;;0
 
 Check objectsore overall occupancy
 
-check_purefb_occpy.py 10.225.112.69 T-a1c1a9de-5d14-4f1d-9469-4e1853232ece --s3
+check_purefb_space.py 10.225.112.69 T-a1c1a9de-5d14-4f1d-9469-4e1853232ece --s3
 
-PURE_FB_OBJSTOR_OCCUPANCY OK - FB occupancy is 1% | 'FB occupancy'=1.0%;;;0;100
+PURE_FB_OBJSTORE_SPACE OK - FB space is 1% | 'FB space'=1.0%;;;0;100
 
 #### check_purefb_perf.py
 
