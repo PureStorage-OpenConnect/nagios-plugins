@@ -22,9 +22,7 @@ Plugins depends on
 
 [nagiosplugin](https://github.com/mpounsett/nagiosplugin) helper Python class library for Nagios plugins
 
-[purestorage](https://github.com/purestorage/rest-client) Pure Storage Python REST Client for FlashArray
-
-[purity_fb](https://github.com/purestorage/purity_fb_python_client) Pure Storage Python REST Client for FlashBlade
+[py-pure-client](https://github.com/PureStorage-OpenConnect/py-pure-client) Pure Storage Python REST Client for FlashArray
 
 ```bash
 pip install -r requirements.txt
