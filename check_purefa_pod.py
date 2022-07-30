@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020, 2022 Pure Storage, Inc.
 #
 # * Overview
 #
-# This short Nagios/Icinga plugin code shows  how to build a simple plugin to monitor Pure Storage FlashArrays.
+# This simple Nagios/Icinga plugin can be used to monitor Pure Storage FlashArrays.
 # The Pure Storage Python REST Client is used to query the FlashArray.
 #
 # * Installation
@@ -12,10 +12,6 @@
 # for example the /usr/lib/nagios/plugins folder.
 # Change the execution rights of the program to allow the execution to 'all' (usually chmod 0755).
 #
-# * Dependencies
-#
-#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
-#  purestorage       Pure Storage Python REST Client (https://github.com/purestorage/rest-client)
 
 """Pure Storage FlashArray pod status
 
@@ -32,14 +28,21 @@ import argparse
 import logging
 import logging.handlers
 import nagiosplugin
-import purestorage
-import urllib3
+from pypureclient import flasharray, PureError
 
+# Disable warnings using urllib3 embedded in requests or directly
+try:
+    import requests
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+except:
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-class PureFAhw(nagiosplugin.Resource):
+class PureFApod(nagiosplugin.Resource):
     """Pure Storage FlashArray pod status
 
-    Retrieves FA pod status
+    Retrieve FA pod status
 
     """
 
@@ -62,47 +65,48 @@ class PureFAhw(nagiosplugin.Resource):
         else:
             return 'PURE_FA_POD_' + str(self.pod)
 
-    def get_status(self, monitor=None):
+    def get_status(self, perf=False):
         """Gets pod status from flasharray."""
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        fainfo={}
         try:
-            fa = purestorage.FlashArray(self.endpoint, api_token=self.apitoken)
+            client = flasharray.Client(target=self.endpoint,
+                                       api_token=self.apitoken,
+                                       user_agent='Pure_Nagios_plugin/0.2')
             if self.pod is None:
-                if monitor is None:
-                    fainfo = fa.list_pods()
+                if not perf:
+                    res = client.get_pods()
                 else:
-                    fainfo = fa.list_pods(action='monitor', mirrored=True)
+                    res = client.get_pods_performance()
             else:
-                if monitor is None:
-                    fainfo = [fa.get_pod(self.pod)]
+                if not perf:
+                    res = client.get_pods(names = [self.pod])
                 else:
-                    fainfo = fa.get_pod(self.pod, action='monitor', mirrored=True)
-            fa.invalidate_cookie()
+                    res = client.get_pods_performance(names = [self.pod])
+            if isinstance(res, flasharray.ValidResponse):
+                fainfo = res.items
         except Exception as e:
-            raise nagiosplugin.CheckError(f'FA REST call returned "{e}"')
+            raise nagiosplugin.CheckError('FA REST call returned "{}"'.format(e))
         return(fainfo)
 
     def probe(self):
         podstatus = self.get_status()
-        podmetrics = self.get_status(monitor=True)
+        podmetrics = self.get_status(perf=True)
         failedpods = []
         slowpods = []
         for pod in podstatus:
-            failedarrays = [array for array in pod['arrays'] if not array['status'] == 'online']
+            failedarrays = [array for array in pod.arrays if not array.status == 'online']
             if failedarrays:
-                failedpods.append({'name': pod['name'], 'array': failedarrays})
+                failedpods.append({'name': pod.name, 'array': failedarrays})
         
         for pod in podmetrics:
-            if pod['usec_per_mirrored_write_op'] > (int(self.criticalwritelatency) * 1000):
-                slowpods.append({'name': pod['name'], 'usec_per_mirrored_write_op': pod['usec_per_mirrored_write_op']})
+            if pod.usec_per_mirrored_write_op > (int(self.criticalwritelatency) * 1000):
+                slowpods.append({'name': pod.name, 'usec_per_mirrored_write_op': pod.usec_per_mirrored_write_op})
 
         if failedpods:
-            metrics = ", ".join([f"For pod {pod['name']} " + ", ".join([f"the array {array['name']} is {array['status']}" for array in pod['array']])  for pod in failedpods])
+            metrics = ", ".join(["Pod {} ".format(pod.name) + ", ".join(["the array {} is {}".format(array.name, array.status) for array in pod.array]) for pod in failedpods])
             metric = nagiosplugin.Metric(metrics + ' status', 1, context='default')
             return metric
         elif slowpods:
-            metrics = ", ".join([f"Pod {pod['name']} has a write latency of {pod['usec_per_mirrored_write_op'] / 1000} ms." for pod in slowpods])
+            metrics = ", ".join(["Pod {} has a write latency of {} ms.".format(pod.name, pod.usec_per_mirrored_write_op / 1000) for pod in slowpods])
             metric = nagiosplugin.Metric(metrics + ' status', 1, context='default')
             return metric
         else:
@@ -127,7 +131,7 @@ def parse_args():
 @nagiosplugin.guarded
 def main():
     args = parse_args()
-    check = nagiosplugin.Check( PureFAhw(args.endpoint, args.apitoken, args.pod, args.criticalwritelatency) )
+    check = nagiosplugin.Check( PureFApod(args.endpoint, args.apitoken, args.pod, args.criticalwritelatency) )
     check.add(nagiosplugin.ScalarContext('default', '', '@1:1'))
     check.main(args.verbose, args.timeout)
 

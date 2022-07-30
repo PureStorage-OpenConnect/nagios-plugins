@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020, 2022 Pure Storage, Inc.
 #
 # * Overview
 #
-# This short Nagios/Icinga plugin code shows  how to build a simple plugin to monitor Pure Storage FlashBlade systems.
+# This simple Nagios/Icinga plugin code shows can be used to monitor Pure Storage FlashBlade systems.
 # The Pure Storage Python REST Client is used to query the FlashBlade hardware compoment status.
 # Plugin leverages the remarkably helpful nagiosplugin library by Christian Kauhaus.
 #
@@ -13,10 +13,6 @@
 # for example the /usr/lib/nagios/plugins folder.
 # Change the execution rights of the program to allow the execution to 'all' (usually chmod 0755).
 #
-# * Dependencies
-#
-#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
-#  purity_fb         Pure Storage Python REST Client for FlashBlade (https://github.com/purestorage/purity_fb_python_client)
 
 """Pure Storage FlashBlade hardware components status
 
@@ -34,7 +30,7 @@ import argparse
 import logging
 import logging.handlers
 import nagiosplugin
-from purity_fb import PurityFb, Hardware, rest
+from pypureclient import flashblade, PureError
 
 # Disable warnings using urllib3 embedded in requests or directly
 try:
@@ -49,7 +45,7 @@ except:
 class PureFBhw(nagiosplugin.Resource):
     """Pure Storage FlashBlade hardware component status
 
-    Retrieves the currents operating status of a specified hardware component
+    Retrieve FB hardware components status
 
     """
 
@@ -69,31 +65,36 @@ class PureFBhw(nagiosplugin.Resource):
         return 'PURE_FB_' + str(self.component)
 
     def get_status(self):
-        """Gets hardware component status from FlashBlade."""
-        fbinfo={}
+        """Get hardware component status from FlashBlade."""
         try:
-            fb = PurityFb(self.endpoint)
-            fb.disable_verify_ssl()
-            fb.login(self.apitoken)
-            fbinfo = fb.hardware.list_hardware(names=[self.component])
-            fb.logout()
+            client = flashblade.Client(target=self.endpoint,
+                                       api_token=self.apitoken,
+                                       user_agent='Pure_Nagios_plugin/0.2')
+            if self.component is None:
+                res = client.get_hardware()
+            else:
+                res = client.get_hardware(names=[self.component])
+            if isinstance(res, flashblade.ValidResponse):
+                fbinfo = list(res.items)
         except Exception as e:
-            raise nagiosplugin.CheckError(f'FA REST call returned "{e}"')
+            raise nagiosplugin.CheckError('FB REST call returned "{}"'.format(e))
         return(fbinfo)
 
     def probe(self):
-
         fbinfo = self.get_status()
-        if not fbinfo:
-            return []
-        self.logger.debug('FB REST call returned "%s" ', fbinfo)
-        status = fbinfo.items[0].status
-        if status == 'unused':
-            return []
-        if status == 'healthy':
-            metric = nagiosplugin.Metric(self.component + ' status', 0, context='default' )
+        if fbinfo:
+            failedcomponents = [component for component in fbinfo if component.status not  in ['healthy', 'unused', 'not_installed']]
+
+            if failedcomponents:
+                metrics = ", ".join([component.name + ': ' + component.status for component in failedcomponents])
+                metric = nagiosplugin.Metric(metrics + '. Status', 1, context='default')
+            else:
+                if self.component is None:
+                    metric = nagiosplugin.Metric('All hardware components are OK. Status', 0, context='default' )
+                else:
+                    metric = nagiosplugin.Metric('{} hardware is OK. Status'.format(self.component), 0, context='default' )
         else:
-            metric = nagiosplugin.Metric(self.component + ' status', 1, context='default')
+            metric = []
         return metric
 
 
@@ -101,7 +102,7 @@ def parse_args():
     argp = argparse.ArgumentParser()
     argp.add_argument('endpoint', help="FB hostname or ip address")
     argp.add_argument('apitoken', help="FB api_token")
-    argp.add_argument('component', help="FB hardware component")
+    argp.add_argument('--component', help="FB hardware component")
     argp.add_argument('-v', '--verbose', action='count', default=0,
                       help='increase output verbosity (use up to 3 times)')
     argp.add_argument('-t', '--timeout', default=30,

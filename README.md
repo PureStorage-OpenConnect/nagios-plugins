@@ -1,6 +1,6 @@
 # Nagios/Icinga2
 
-A repository of plugins and extensions to monitor Pure Storage FlashArray and FlashBlade astorage arrays with Nagios.
+A repository of plugins and extensions to monitor Pure Storage FlashArray and FlashBlade storage arrays with Nagios.
 
 ## Plugins
 
@@ -73,17 +73,15 @@ check_purefa_hw.py 10.225.112.81 c4eb5b21-4122-b871-8b0f-684bf72b5283 CH0.BAY2
 
 PURE_FA_CH0.BAY2 OK - CH0.BAY2 status is 0 | 'CH0.BAY2 status'=0;1;1
 
-#### check_purefa_occpy.py
+#### check_purefa_space.py
 
-Nagios plugin to retrieve the current status of hardware components from a Pure Storage FlashArray.
-Hardware status indicators are collected from the target FA using the REST call.
+Nagios plugin to retrieve the overall occupancy from a Pure Storage FlashArray or from a single volume.
+Storage occupancy indicators are collected from the target FA using the REST call.
 
 ##### Syntax
 
- *check_purefa_occpy.py endpoint api_token [--vol volname] [-w RANGE] [-c RANGE]*
+ *check_purefa_space.py endpoint api_token [--vol volname] [-w RANGE] [-c RANGE]*
  
-  Nagios plugin to retrieve the overall occupancy from a Pure Storage FlashArray or from a single volume.
-  Storage occupancy indicators are collected from the target FA using the REST call.
   The plugin has two mandatory arguments:  'endpoint', which specifies the target FA and 'apitoken', which
   specifies the autentication token for the REST call session. A third optional parameter, 'volname' can
   be used to check a specific named value. The optional values for the warning and critical thresholds have
@@ -92,7 +90,7 @@ Hardware status indicators are collected from the target FA using the REST call.
  
 ###### Example
 
-Check the whole FlashArray occupancy:
+Check the whole FlashArray space usage:
 
 check_purefa_occpy.py 10.225.112.81 c4eb5b21-4122-b871-8b0f-684bf72b5283
 
@@ -205,7 +203,7 @@ occupancy, while they must be integer byte units if checking a single volume.
  
 ###### Example
 
-Check the whole FlashBlace occupancy:
+Check the whole FlashBlade occupancy:
 
 check_purefb_occpy.py 10.225.112.69 T-a1c1a9de-5d14-4f1d-9469-4e1853232ece
 

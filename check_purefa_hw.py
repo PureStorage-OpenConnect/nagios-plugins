@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020, 2022 Pure Storage, Inc.
 #
 # * Overview
 #
@@ -12,10 +12,6 @@
 # for example the /usr/lib/nagios/plugins folder.
 # Change the execution rights of the program to allow the execution to 'all' (usually chmod 0755).
 #
-# * Dependencies
-#
-#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
-#  purestorage       Pure Storage Python REST Client (https://github.com/purestorage/rest-client)
 
 """Pure Storage FlashArray hardware components status
 
@@ -35,7 +31,8 @@ import argparse
 import logging
 import logging.handlers
 import nagiosplugin
-import purestorage
+from pypureclient import flasharray, PureError
+
 
 # Disable warnings using urllib3 embedded in requests or directly
 try:
@@ -50,7 +47,7 @@ except:
 class PureFAhw(nagiosplugin.Resource):
     """Pure Storage FlashArray hardware status
 
-    Retrieves FA hardware component status
+    Retrieve FA hardware components status
 
     """
 
@@ -73,31 +70,36 @@ class PureFAhw(nagiosplugin.Resource):
             return 'PURE_FA_HW_' + str(self.component)
 
     def get_status(self):
-        """Gets hardware element status from flasharray."""
-        fainfo={}
+        """Get hardware components status from flasharray."""
         try:
-            fa = purestorage.FlashArray(self.endpoint, api_token=self.apitoken)
+            client = flasharray.Client(target=self.endpoint,
+                                   api_token=self.apitoken,
+                                   user_agent='Pure_Nagios_plugin/0.2')
             if self.component is None:
-                fainfo = fa.list_hardware()
+                res = client.get_hardware()
             else:
-                fainfo = [fa.get_hardware(self.component)]
-            fa.invalidate_cookie()
+                res = client.get_hardware(names=[self.component])
+            if isinstance(res, flasharray.ValidResponse):
+                fainfo = list(res.items)
         except Exception as e:
-            raise nagiosplugin.CheckError(f'FA REST call returned "{e}"')
+            raise nagiosplugin.CheckError('FA REST call returned "{}"'.format(e))
         return(fainfo)
 
     def probe(self):
         fainfo = self.get_status()
-        failedcomponents = [component for component in fainfo if not component['status'] in ['ok', 'not_installed']]
+        if fainfo:
+            failedcomponents = [component for component in fainfo if component.status not  in ['ok', 'not_installed']]
 
-        if failedcomponents:
-            metrics = ", ".join([component['name'] + ': ' + component['status'] for component in failedcomponents])
-            metric = nagiosplugin.Metric(metrics + ' status', 1, context='default')
-        else:
-            if self.component is None:
-                metric = nagiosplugin.Metric('All hardware components are OK' + ' status', 0, context='default' )
+            if failedcomponents:
+                metrics = ", ".join([component.name + ': ' + component.status for component in failedcomponents])
+                metric = nagiosplugin.Metric(metrics + '. Status', 1, context='default')
             else:
-                metric = nagiosplugin.Metric(f'{self.component} hardware is OK' + ' status', 0, context='default' )
+                if self.component is None:
+                    metric = nagiosplugin.Metric('All hardware components are OK. Status', 0, context='default' )
+                else:
+                    metric = nagiosplugin.Metric('{} hardware is OK. Status'.format(self.component), 0, context='default' )
+        else:
+            metric = None
         return metric
 
 

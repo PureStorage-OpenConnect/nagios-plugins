@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020, 2022 Pure Storage, Inc.
 #
 # * Overview
 #
-# This short Nagios/Icinga plugin code shows  how to build a simple plugin to monitor Pure Storage FlashArrays.
+# This simple Nagios/Icinga plugin code can be used to monitor Pure Storage FlashArrays.
 # The Pure Storage Python REST Client is used to query the FlashArray alert messages.
 #
 # * Installation
@@ -12,11 +12,6 @@
 # for example the /usr/lib/nagios/plugins folder.
 # Change the execution rights of the program to allow the execution to 'all' (usually chmod 0755).
 #
-# * Dependencies
-#
-#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
-#  purestorage       Pure Storage Python REST Client (https://github.com/purestorage/rest-client)
-
 
 """Pure Storage FlashArray alert messages status
    Nagios plugin to check the general state of a Pure Storage FlashArray from the internal alert messages.
@@ -29,7 +24,7 @@ import argparse
 import logging
 import logging.handlers
 import nagiosplugin
-import purestorage
+from pypureclient import flasharray, PureError
 
 # Disable warnings using urllib3 embedded in requests or directly
 try:
@@ -43,7 +38,7 @@ except:
 
 class PureFAalert(nagiosplugin.Resource):
     """Pure Storage FlashArray alerts
-    Reports the status of all open messages on FlashArray
+    Report the status of all open messages on FlashArray
     """
 
     def __init__(self, endpoint, apitoken):
@@ -65,18 +60,18 @@ class PureFAalert(nagiosplugin.Resource):
 
     def get_alerts(self):
         """Gets active alerts from FlashArray."""
-        fainfo = {}
         try:
-            fa = purestorage.FlashArray(self.endpoint, api_token=self.apitoken)
-            fainfo = fa.list_messages(open = True)
-            fa.invalidate_cookie()
+            client = flasharray.Client(target=self.endpoint,
+                                   api_token=self.apitoken,
+                                   user_agent='Pure_Nagios_plugin/0.2')
+            res = client.get_alerts()
+            if isinstance(res, flasharray.ValidResponse):
+                fainfo = list(res.items)
         except Exception as e:
-            raise nagiosplugin.CheckError(f'FA REST call returned "{e}"')
-        
+            raise nagiosplugin.CheckError('FA REST call returned "{}"'.format(e)) 
         return(fainfo)
 
     def probe(self):
-
         fainfo = self.get_alerts()
         if not fainfo:
             return [nagiosplugin.Metric('critical', 0, min=0),
@@ -84,11 +79,13 @@ class PureFAalert(nagiosplugin.Resource):
                     nagiosplugin.Metric('info', 0, min=0)]
         # Increment each counter for each type of event
         for alert in fainfo:
-            if alert['current_severity'] == 'critical':
+            if alert.state == 'closed':
+                continue
+            if alert.severity == 'critical':
                 self.crit += 1
-            elif alert['current_severity'] == 'warning':
+            elif alert.severity == 'warning':
                 self.warn += 1
-            elif alert['current_severity'] == 'info':
+            elif alert.severity == 'info':
                 self.info += 1
         return [nagiosplugin.Metric('critical', self.crit, min=0),
                 nagiosplugin.Metric('warning', self.warn, min=0),

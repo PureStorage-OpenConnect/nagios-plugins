@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020, 2022 Pure Storage, Inc.
 #
 # * Overview
 #
-# This short Nagios/Icinga plugin code shows  how to build a simple plugin to monitor Pure Storage FlashBlade systems.
+# This simple Nagios/Icinga plugin code can be used to monitor Pure Storage FlashBlade systems.
 # The Pure Storage Python REST Client is used to query the FlashBlade alert messages.
 # Plugin leverages the remarkably helpful nagiosplugin library by Christian Kauhaus.
 #
@@ -13,10 +13,6 @@
 # for example the /usr/lib/nagios/plugins folder.
 # Change the execution rights of the program to allow the execution to 'all' (usually chmod 0755).
 #
-# * Dependencies
-#
-#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
-#  purity_fb         Pure Storage Python REST Client for FlashBlade (https://github.com/purestorage/purity_fb_python_client)
 
 """Pure Storage FlashBlade alert messages status
 
@@ -30,7 +26,8 @@ import argparse
 import logging
 import logging.handlers
 import nagiosplugin
-from purity_fb import PurityFb, rest
+from pypureclient import flashblade, PureError
+
 
 # Disable warnings using urllib3 embedded in requests or directly
 try:
@@ -68,15 +65,15 @@ class PureFBalert(nagiosplugin.Resource):
 
     def get_alerts(self):
         """Gets active alerts from FlashBlade."""
-        fbinfo = {}
         try:
-            fb = PurityFb(self.endpoint)
-            fb.disable_verify_ssl()
-            fb.login(self.apitoken)
-            fbinfo = fb.alerts.list_alerts(filter="state='open'")
-            fb.logout()
+            client = flashblade.Client(target=self.endpoint,
+                                       api_token=self.apitoken,
+                                       user_agent='Pure_Nagios_plugin/0.2')
+            res = client.get_alerts(filter='state=\'open\'')
+            if isinstance(res, flashblade.ValidResponse):
+                fbinfo = list(res.items)
         except Exception as e:
-            raise nagiosplugin.CheckError(f'FA REST call returned "{e}"')
+            raise nagiosplugin.CheckError('FB REST call returned "{}"'.format(e))
         return(fbinfo)
 
     def probe(self):
@@ -85,13 +82,14 @@ class PureFBalert(nagiosplugin.Resource):
         self.logger.debug('FB REST call returned "%s" ', fbinfo)
         if not fbinfo:
             return []
-        for msg in fbinfo.items:
-            severity = msg.severity
-            if severity == 'critical':
+        for msg in fbinfo:
+            if msg.state != 'open':
+                continue
+            if msg.severity == 'critical':
                 self.crit += 1
-            if severity == 'warning':
+            elif msg.severity == 'warning':
                 self.warn += 1
-            if severity == 'info':
+            elif msg.severity == 'info':
                 self.info += 1
 
         return [nagiosplugin.Metric('critical', self.crit, min=0),

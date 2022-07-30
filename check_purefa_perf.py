@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020, 2022 Pure Storage, Inc.
 #
 # * Overview
 #
-# This short Nagios/Icinga plugin code shows  how to build a simple plugin to monitor Pure Storage FlashArrays.
+# This simple Nagios/Icinga plugin code can be used to monitor Pure Storage FlashArrays.
 # The Pure Storage Python REST Client is used to query the FlashArray performance counters. An optional parameter
 # allow to check a single volume instead than the whole flasharray
 #
@@ -13,11 +13,6 @@
 # for example the /usr/lib/nagios/plugins folder.
 # Change the execution rights of the program to allow the execution to 'all' (usually chmod 0755).
 #
-# * Dependencies
-#
-#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
-#  purestorage       Pure Storage Python REST Client (https://github.com/purestorage/rest-client)
-
 
 """Pure Storage FlashArray performance indicators
 
@@ -41,7 +36,7 @@ import argparse
 import logging
 import logging.handlers
 import nagiosplugin
-import purestorage
+from pypureclient import flasharray, PureError
 
 # Disable warnings using urllib3 embedded in requests or directly
 try:
@@ -56,7 +51,7 @@ except:
 class PureFAperf(nagiosplugin.Resource):
     """Pure Storage FlashArray performance indicators
 
-    Gets the six global KPIs of the flasharray and stores them in the
+    Get the six global KPIs of the flasharray and stores them in the
     metric objects
     """
 
@@ -79,30 +74,31 @@ class PureFAperf(nagiosplugin.Resource):
             return 'PURE_FA_VOL_PERF'
 
     def get_perf(self):
-        """Gets performance counters from flasharray."""
-        fainfo = {}
+        """Get performance counters from flasharray."""
         try:
-            fa = purestorage.FlashArray(self.endpoint, api_token=self.apitoken)
+            client = flasharray.Client(target=self.endpoint,
+                                       api_token=self.apitoken,
+                                       user_agent='Pure_Nagios_plugin/0.2')
             if (self.volname is None):
-                fainfo = fa.get(action='monitor')[0]
+                res = client.get_arrays_performance()
             else:
-                fainfo = fa.get_volume(self.volname, action='monitor')[0]
-            fa.invalidate_cookie()
+                res = client.get_volumes_performance(names=[self.volname])
+            if isinstance(res, flasharray.ValidResponse):
+                fainfo = res.items
         except Exception as e:
-            raise nagiosplugin.CheckError(f'FA REST call returned "{e}"')
-        return(fainfo)
+            raise nagiosplugin.CheckError('FA REST call returned "{}"'.format(e))
+        return(list(fainfo))
 
     def probe(self):
-
         fainfo = self.get_perf()
         if not fainfo:
             return []
-        wlat = int(fainfo.get('usec_per_write_op'))
-        rlat = int(fainfo.get('usec_per_read_op'))
-        wbw = int(fainfo.get('input_per_sec'))
-        rbw = int(fainfo.get('output_per_sec'))
-        wiops = int(fainfo.get('writes_per_sec'))
-        riops = int(fainfo.get('reads_per_sec'))
+        wlat = int(fainfo.usec_per_write_op)
+        rlat = int(fainfo.usec_per_read_op)
+        wbw = int(fainfo.write_bytes_per_sec)
+        rbw = int(fainfo.read_bytes_per_sec)
+        wiops = int(fainfo.writes_per_sec)
+        riops = int(fainfo.reads_per_sec)
         if (self.volname is None):
             mlabel = 'FA_'
         else:

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-# Copyright (c) 2018, 2019, 2020 Pure Storage, Inc.
+# Copyright (c) 2018, 2019, 2020, 2022 Pure Storage, Inc.
 #
 # * Overview
 #
-# This short Nagios/Icinga plugin code shows  how to build a simple plugin to monitor Pure Storage FlashArrays.
-# The Pure Storage Python REST Client is used to query the FlashArray occupancy indicators.
+# This simple Nagios/Icinga plugin code can be used to monitor Pure Storage FlashArrays.
+# The Pure Storage Python REST Client is used to query the FlashArray space indicators.
 #
 # * Installation
 #
@@ -12,20 +12,16 @@
 # for example the /usr/lib/nagios/plugins folder.
 # Change the execution rights of the program to allow the execution to 'all' (usually chmod 0755).
 #
-# * Dependencies
-#
-#  nagiosplugin      helper Python class library for Nagios plugins (https://github.com/mpounsett/nagiosplugin)
-#  purestorage       Pure Storage Python REST Client (https://github.com/purestorage/rest-client)
 
-"""Pure Storage FlashArray occupancy status
+"""Pure Storage FlashArray space status
 
-   Nagios plugin to retrieve the overall occupancy from a Pure Storage FlashArray or from a single volume.
-   Storage occupancy indicators are collected from the target FA using the REST call.
+   Nagios plugin to retrieve the overall space utilization from a Pure Storage FlashArray or from a single volume.
+   Storage utilization indicators are collected from the target FA using the REST call.
    The plugin has two mandatory arguments:  'endpoint', which specifies the target FA and 'apitoken', which
    specifies the autentication token for the REST call session. A third optional parameter, 'volname' can
    be used to check a specific named value. The optional values for the warning and critical thresholds have
    different meausure units: they must be expressed as percentages in the case of checkig the whole FlashArray
-   occupancy, while they must be integer byte units if checking a single volume. You can use the -p flag to
+   used space, while they must be integer byte units if checking a single volume. You can use the -p flag to
    switch to percentages for per volume checking.
 
 """
@@ -34,7 +30,7 @@ import argparse
 import logging
 import logging.handlers
 import nagiosplugin
-import purestorage
+from pypureclient import flasharray, PureError
 
 # Disable warnings using urllib3 embedded in requests or directly
 try:
@@ -46,10 +42,10 @@ except:
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-class PureFAoccpy(nagiosplugin.Resource):
-    """Pure Storage FlashArray  occupancy
+class PureFAspace(nagiosplugin.Resource):
+    """Pure Storage FlashArray used space
 
-    Calculates the overall FA storage occupancy or a single volume capacity.
+    Retrieve the overall FA storage used space or a single volume capacity.
 
     """
 
@@ -68,39 +64,41 @@ class PureFAoccpy(nagiosplugin.Resource):
     @property
     def name(self):
         if (self.volname is None):
-            return 'PURE_FA_OCCUPANCY'
+            return 'PURE_FA_SPACE'
         else:
-            return 'PURE_FA_VOL_OCCUPANCY'
+            return 'PURE_FA_VOL_SPACE'
 
 
     def get_space(self):
-        """Gets performance counters from flasharray."""
-        fainfo = {}
+        """Get space counters from flasharray."""
         try:
-            fa = purestorage.FlashArray(self.endpoint, api_token=self.apitoken)
+            client = flasharray.Client(target=self.endpoint,
+                                   api_token=self.apitoken,
+                                   user_agent='Pure_Nagios_plugin/0.2')
             if (self.volname is None):
-                fainfo = fa.get(space=True)[0]
+                res = client.get_arrays()
             else:
-                fainfo = fa.get_volume(self.volname, space=True)
-            fa.invalidate_cookie()
+                res = client.get_volumes_space(names=[self.volname])
+            if isinstance(res, flasharray.ValidResponse):
+                fainfo = res.items
         except Exception as e:
-            raise nagiosplugin.CheckError(f'FA REST call returned "{e}"')
-        return(fainfo)
+            raise nagiosplugin.CheckError('FA REST call returned "{}"'.format(e))
+        return(fainfo.next())
 
     def probe(self):
-
         fainfo = self.get_space()
         if not fainfo:
             return ''
         if (self.volname is None):
-            occupancy = round(float(fainfo.get('total'))/float(fainfo.get('capacity')), 2) * 100
-            metric = nagiosplugin.Metric('FA occupancy', occupancy, '%', min=0, max=100, context='occupancy')
-        elif self.percentage:
-            occupancy = round(float(fainfo.get('total'))/float(fainfo.get('size')), 2) * 100
-            metric = nagiosplugin.Metric(self.volname + ' occupancy', occupancy, '%', min=0, max=100, context='occupancy')
+            if self.percentage:
+                space = round(float(fainfo.space.total_physical) / float(fainfo.capacity), 2) * 100
+                metric = nagiosplugin.Metric('FA space', space, '%', min=0, max=100, context='space')
+            else:
+                space = int(fainfo.space.total_physical)
+                metric = nagiosplugin.Metric('FA space', space, 'B', min=0, context='space')
         else:
-            occupancy = int(fainfo.get('volumes'))
-            metric = nagiosplugin.Metric(self.volname + ' occupancy', occupancy, 'B', min=0, context='occupancy')
+            space = int(fainfo.space.total_physical)
+            metric = nagiosplugin.Metric(self.volname + ' space', space, 'B', min=0, context='space')
         return metric
 
 
@@ -108,14 +106,14 @@ def parse_args():
     argp = argparse.ArgumentParser()
     argp.add_argument('endpoint', help="FA hostname or ip address")
     argp.add_argument('apitoken', help="FA api_token")
-    argp.add_argument('--vol', help="FA volume name. If omitted the whole FA occupancy is checked")
+    argp.add_argument('--vol', help="FA volume name. If omitted the whole FA used space is checked")
     
     argp.add_argument('-w', '--warning', metavar='RANGE', default='',
-                      help='return warning if occupancy is outside RANGE. Value has to be expressed in percentage for the FA, while in bytes for the single volume')
+                      help='return warning if used space is outside RANGE. Value has to be expressed in percentage for the FA, while in bytes for the single volume')
     argp.add_argument('-c', '--critical', metavar='RANGE', default='',
-                      help='return critical if occupancy is outside RANGE. Value has to be expressed in percentage for the FA, while in bytes for the single volume')
+                      help='return critical if used space is outside RANGE. Value has to be expressed in percentage for the FA, while in bytes for the single volume')
     argp.add_argument('-p', '--percentage', action='store_true',
-                      help='Set this flag if you want to use percentages instead of bytes for volume space usage. This flag does nothing when checking the whole array')
+                      help='Set this flag if you want to use percentages instead of bytes for array space usage. This flag does nothing when checking the whole array')
     argp.add_argument('-v', '--verbose', action='count', default=0,
                       help='increase output verbosity (use up to 3 times)')
     argp.add_argument('-t', '--timeout', default=30,
@@ -126,8 +124,8 @@ def parse_args():
 @nagiosplugin.guarded
 def main():
     args = parse_args()
-    check = nagiosplugin.Check( PureFAoccpy(args.endpoint, args.apitoken, args.vol, args.percentage) )
-    check.add(nagiosplugin.ScalarContext('occupancy', args.warning, args.critical))
+    check = nagiosplugin.Check( PureFAspace(args.endpoint, args.apitoken, args.vol, args.percentage) )
+    check.add(nagiosplugin.ScalarContext('space', args.warning, args.critical))
     check.main(args.verbose, args.timeout)
 
 if __name__ == '__main__':
