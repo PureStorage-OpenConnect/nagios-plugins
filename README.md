@@ -6,8 +6,9 @@ A repository of plugins and extensions to monitor Pure Storage FlashArray and Fl
 
 * [check_purefa_alert.py](check_purefa_alert.py) Simple plugin for monitoring Pure Storage FlashArray alerts status.
 * [check_purefa_hw.py](check_purefa_hw.py) Simple plugin for monitoring Pure Storage FlashArray hardware components.
-* [check_purefa_space.py](check_purefa_space.py) Simple plugin for monitoring Pure Storage FlashArray space occupancy (global/per volume).
+* [check_purefa_space.py](check_purefa_space.py) Simple plugin for monitoring Pure Storage FlashArray space metrics (global/per volume).
 * [check_purefa_perf.py](check_purefa_perf.py) Simple plugin for monitoring Pure Storage FlashArray performance metrics (global/per volume).
+* [check_purefa_pod.py](check_purefa_pod.py) Simple plugin for monitoring Pure Storage FlashArray pods status (global/per pod).
 * [check_purefb_alert.py](check_purefb_alert.py) Simple plugin for monitoring Pure Storage FlashBlade alerts status.
 * [check_purefb_hw.py](check_purefb_hw.py) Simple plugin for monitoring Pure Storage FlashBlade hardware components.
 * [check_purefb_space.py](check_purefb_space.py) Simple plugin for monitoring Pure Storage FlashBlade space occupancy (global/object store/per shared filesystem).
@@ -18,7 +19,7 @@ A repository of plugins and extensions to monitor Pure Storage FlashArray and Fl
 The plugin scripts should be copied to the Nagios plugins directory on the machine hosting the Nagios server or the NRPE,
 for example the /usr/lib/nagios/plugins folder should be used for Nagios XI.
 Change the execution rights of the plugins to allow the execution to 'all' (usually chmod 0755).
-Plugins depends on
+Plugins depend on
 
 [nagiosplugin](https://github.com/mpounsett/nagiosplugin) helper Python class library for Nagios plugins
 
