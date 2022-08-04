@@ -69,7 +69,7 @@ class PureFBalert(nagiosplugin.Resource):
         try:
             client = flashblade.Client(target=self.endpoint,
                                        api_token=self.apitoken,
-                                       user_agent='Pure_Nagios_plugin/0.2')
+                                       user_agent='Pure_Nagios_plugin/0.2.0')
             res = client.get_alerts(filter='state=\'open\'')
             if isinstance(res, flashblade.ValidResponse):
                 fbinfo = list(res.items)

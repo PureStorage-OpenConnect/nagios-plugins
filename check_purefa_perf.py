@@ -79,7 +79,7 @@ class PureFAperf(nagiosplugin.Resource):
         try:
             client = flasharray.Client(target=self.endpoint,
                                        api_token=self.apitoken,
-                                       user_agent='Pure_Nagios_plugin/0.2')
+                                       user_agent='Pure_Nagios_plugin/0.2.0')
             if (self.volname is None):
                 res = client.get_arrays_performance()
             else:
