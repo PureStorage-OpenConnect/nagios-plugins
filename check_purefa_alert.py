@@ -20,6 +20,12 @@
    there is any pending message that reports a warning or critical status of one or more components
 """
 
+import sys
+
+if not sys.warnoptions:
+    import warnings
+    warnings.simplefilter("ignore")
+
 import argparse
 import logging
 import logging.handlers
