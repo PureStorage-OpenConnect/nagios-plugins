@@ -1,3 +1,5 @@
+# THIS INTEGRATION IS DEPRECATED IN FAVOR OF THE OPENMETRICS EXPORTER
+
 # Nagios/Icinga2
 
 A repository of plugins and extensions to monitor Pure Storage FlashArray and FlashBlade storage arrays with Nagios.
